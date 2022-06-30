@@ -18,7 +18,7 @@ class FlutterTour extends StatefulWidget {
 class _FlutterTourState extends State<FlutterTour> {
   final double cardWidth = 250;
   int activePosition = 0;
-  CardPosition cardPosition = CardPosition(left: 0, right: 0, top: 0, bottom: 0);
+  CardPosition cardPosition = CardPosition();
 
   @override
   Widget build(BuildContext context) {
@@ -71,18 +71,20 @@ class _FlutterTourState extends State<FlutterTour> {
   WidgetPosition _getWidgetPosition() {
     final mediaQuery = MediaQuery.of(context);
     final renderBox = widget.tourTargets[activePosition].key.currentContext?.findRenderObject() as RenderBox?;
-    final offset = ((widget.controller?.hasClients ?? false) ? widget.controller?.offset ?? 0.0 : 0.0);
-    final position = renderBox?.localToGlobal(Offset(0, offset));
-    if (position != null && renderBox != null) {
-      final widgetPosition = WidgetPosition(
-        left: position.dx,
-        top: position.dy - offset,
-        right: position.dx + renderBox.size.width,
-        bottom: (position.dy - offset) + renderBox.size.height,
-      );
+    if (renderBox?.hasSize ?? false) {
+      final offset = ((widget.controller?.hasClients ?? false) ? widget.controller?.offset ?? 0.0 : 0.0);
+      final position = renderBox?.localToGlobal(Offset(0, offset));
+      if (position != null && renderBox != null) {
+        final widgetPosition = WidgetPosition(
+          left: position.dx,
+          top: position.dy - offset,
+          right: position.dx + renderBox.size.width,
+          bottom: (position.dy - offset) + renderBox.size.height,
+        );
 
-      _positionCard(mediaQuery, widgetPosition);
-      return widgetPosition;
+        _positionCard(mediaQuery, widgetPosition);
+        return widgetPosition;
+      }
     }
 
     return WidgetPosition(left: 0, top: 0, right: 0, bottom: 0);
