@@ -8,8 +8,16 @@ import 'widget_position.dart';
 class FlutterTour extends StatefulWidget {
   final List<TourTarget> tourTargets;
   final ScrollController? controller;
+  final Widget? child;
+  final bool? showTour;
 
-  const FlutterTour({Key? key, required this.tourTargets, this.controller}) : super(key: key);
+  const FlutterTour({
+    Key? key,
+    required this.tourTargets,
+    this.controller,
+    this.child,
+    this.showTour = false,
+  }) : super(key: key);
 
   @override
   State<FlutterTour> createState() => _FlutterTourState();
@@ -17,44 +25,60 @@ class FlutterTour extends StatefulWidget {
 
 class _FlutterTourState extends State<FlutterTour> {
   final double cardWidth = 250;
+  bool initialized = false;
   int activePosition = 0;
   CardPosition cardPosition = CardPosition();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        initialized = true;
+        setState(() {});
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     return Stack(
       children: [
-        CustomPaint(
-          painter: Painter(widgetPosition: _getWidgetPosition()),
-          size: size,
-        ),
-        Positioned(
-          left: cardPosition.left,
-          top: cardPosition.top,
-          right: cardPosition.right,
-          bottom: cardPosition.bottom,
-          child: SizedBox(
-            width: cardWidth,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text(widget.tourTargets[activePosition].title),
-                    Text(widget.tourTargets[activePosition].description),
-                    OutlinedButton(onPressed: () => _showNextWidget(), child: const Text('Next'))
-                  ],
+        if (widget.child != null) widget.child as Widget,
+        if (_tourVisible())
+          CustomPaint(
+            painter: Painter(widgetPosition: _getWidgetPosition()),
+            size: MediaQuery.of(context).size,
+          ),
+        if (_tourVisible())
+          Positioned(
+            left: cardPosition.left,
+            top: cardPosition.top,
+            right: cardPosition.right,
+            bottom: cardPosition.bottom,
+            child: SizedBox(
+              width: cardWidth,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Text(widget.tourTargets[activePosition].title),
+                      Text(widget.tourTargets[activePosition].description),
+                      OutlinedButton(onPressed: () => _showNextWidget(), child: const Text('Next'))
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          )
       ],
     );
   }
 
-  Future _showNextWidget() async {
+  bool _tourVisible() => widget.showTour == true && initialized;
+
+  void _showNextWidget({bool refreshState = true}) {
     if (activePosition < widget.tourTargets.length - 1) {
       activePosition++;
     } else {
@@ -65,7 +89,9 @@ class _FlutterTourState extends State<FlutterTour> {
     if (widgetBuildContext != null) {
       Scrollable.ensureVisible(widgetBuildContext);
     }
-    setState(() {});
+    if (refreshState) {
+      setState(() {});
+    }
   }
 
   WidgetPosition _getWidgetPosition() {
@@ -85,6 +111,9 @@ class _FlutterTourState extends State<FlutterTour> {
         _positionCard(mediaQuery, widgetPosition);
         return widgetPosition;
       }
+    } else {
+      _showNextWidget(refreshState: false);
+      return _getWidgetPosition();
     }
 
     return WidgetPosition(left: 0, top: 0, right: 0, bottom: 0);

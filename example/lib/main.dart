@@ -101,18 +101,22 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
-          body: SingleChildScrollView(
+          body: FlutterTour(
+            showTour: true,
             controller: scrollController,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                keys.length,
-                    (index) => _buildText(index),
+            tourTargets: _getTargets(),
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  keys.length,
+                  (index) => _buildText(index),
+                ),
               ),
             ),
           ),
         ),
-        FlutterTour(tourTargets: _getTargets()),
       ],
     );
   }
