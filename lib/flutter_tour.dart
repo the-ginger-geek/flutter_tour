@@ -10,6 +10,18 @@ class FlutterTour extends StatefulWidget {
   final ScrollController? controller;
   final Widget? child;
   final bool? showTour;
+  final bool showBackButton;
+  final TextStyle? cardTitleStyle;
+  final TextStyle? cardDescriptionStyle;
+  final Color? cardBackgroundColor;
+  final Text? cardButtonOneText;
+  final Text? cardOptionalButtonText;
+  final Text? cardButtonTwoText;
+  final Color? cardButtonOneColor;
+  final Color? cardButtonTwoColor;
+  final Color? cardOptionalButtonColor;
+  final Color? cardButtonTwoBorderColor;
+  final void Function()? buttonTwoOnPressed;
 
   const FlutterTour({
     Key? key,
@@ -17,6 +29,18 @@ class FlutterTour extends StatefulWidget {
     this.controller,
     this.child,
     this.showTour = false,
+    this.showBackButton = false,
+    this.cardTitleStyle,
+    this.cardDescriptionStyle,
+    this.cardBackgroundColor,
+    this.cardButtonOneText,
+    this.cardOptionalButtonText,
+    this.cardButtonTwoText,
+    this.cardButtonOneColor,
+    this.cardButtonTwoColor,
+    this.buttonTwoOnPressed,
+    this.cardButtonTwoBorderColor,
+    this.cardOptionalButtonColor,
   }) : super(key: key);
 
   @override
@@ -27,11 +51,13 @@ class _FlutterTourState extends State<FlutterTour> {
   final double cardWidth = 250;
   bool initialized = false;
   int activePosition = 0;
+  late bool? tourVisible;
   CardPosition cardPosition = CardPosition();
 
   @override
   void initState() {
     super.initState();
+    tourVisible = widget.showTour;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       Future.delayed(const Duration(milliseconds: 500), () {
         initialized = true;
@@ -48,7 +74,9 @@ class _FlutterTourState extends State<FlutterTour> {
         if (_tourVisible())
           CustomPaint(
             painter: Painter(widgetPosition: _getWidgetPosition()),
-            size: MediaQuery.of(context).size,
+            size: MediaQuery
+                .of(context)
+                .size,
           ),
         if (_tourVisible())
           Positioned(
@@ -59,13 +87,59 @@ class _FlutterTourState extends State<FlutterTour> {
             child: SizedBox(
               width: cardWidth,
               child: Card(
+                color: widget.cardBackgroundColor,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
                     children: [
-                      Text(widget.tourTargets[activePosition].title),
-                      Text(widget.tourTargets[activePosition].description),
-                      OutlinedButton(onPressed: () => _showNextWidget(), child: const Text('Next'))
+                      Text(widget.tourTargets[activePosition].title,
+                          style: widget.cardTitleStyle, textAlign: TextAlign.center),
+                      const SizedBox(height: 8.0),
+                      Text(widget.tourTargets[activePosition].description,
+                          style: widget.cardDescriptionStyle, textAlign: TextAlign.center),
+                      const SizedBox(height: 8.0),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                                onPressed: () => _showNextWidget(),
+                                style: _buttonStyle(buttonColor: widget.cardButtonOneColor),
+                                child: widget.cardButtonOneText ?? const Text('')),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8.0),
+                      if (widget.showBackButton)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                  onPressed: () => _showPreviousWidget(),
+                                  style: _buttonStyle(buttonColor: widget.cardOptionalButtonColor),
+                                  child: widget.cardOptionalButtonText ?? const Text('')),
+                            ),
+                          ],
+                        ),
+                      if (widget.showBackButton)
+                        const SizedBox(
+                          height: 8.0,
+                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    tourVisible = false;
+                                  });
+                                },
+                                style: _buttonStyle(
+                                    buttonColor: widget.cardButtonTwoColor,
+                                    buttonBorderColor: widget.cardButtonTwoBorderColor),
+                                child: widget.cardButtonTwoText ?? const Text('')),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -76,11 +150,27 @@ class _FlutterTourState extends State<FlutterTour> {
     );
   }
 
-  bool _tourVisible() => widget.showTour == true && initialized;
+  bool _tourVisible() => tourVisible == true && initialized;
 
   void _showNextWidget({bool refreshState = true}) {
     if (activePosition < widget.tourTargets.length - 1) {
       activePosition++;
+    } else {
+      activePosition = 0;
+    }
+
+    final widgetBuildContext = widget.tourTargets[activePosition].key.currentContext;
+    if (widgetBuildContext != null) {
+      Scrollable.ensureVisible(widgetBuildContext);
+    }
+    if (refreshState) {
+      setState(() {});
+    }
+  }
+
+  void _showPreviousWidget({bool refreshState = true}) {
+    if (activePosition < widget.tourTargets.length - 1 && activePosition > 0) {
+      activePosition--;
     } else {
       activePosition = 0;
     }
@@ -135,5 +225,17 @@ class _FlutterTourState extends State<FlutterTour> {
         top: widgetPosition.bottom,
       );
     }
+  }
+
+  ButtonStyle _buttonStyle({Color? buttonColor, Color? buttonBorderColor}) {
+    return ButtonStyle(
+      backgroundColor: MaterialStateProperty.all(buttonColor),
+      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18.0),
+          side: BorderSide(color: buttonBorderColor ?? Colors.transparent, width: 5.0),
+        ),
+      ),
+    );
   }
 }
