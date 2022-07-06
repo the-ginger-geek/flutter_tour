@@ -10,4 +10,6 @@ class CardPosition {
     this.top,
     this.bottom,
   });
+
+  bool get isInitialised => left != null || right != null || top != null || bottom != null;
 }
