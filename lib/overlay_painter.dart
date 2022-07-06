@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'widget_position.dart';
 
-class Painter extends CustomPainter {
+class OverlayPainter extends CustomPainter {
   final WidgetPosition widgetPosition;
 
-  Painter({required this.widgetPosition});
+  OverlayPainter({required this.widgetPosition});
 
   @override
   void paint(Canvas canvas, Size size) {

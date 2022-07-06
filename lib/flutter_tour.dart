@@ -1,9 +1,15 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_tour/arrow_anchor.dart';
+
+import 'arrow_painter.dart';
 import 'card_position.dart';
-import 'painter.dart';
+import 'overlay_painter.dart';
 import 'tour_target.dart';
 import 'widget_position.dart';
+
+final keyCard = GlobalKey();
 
 class FlutterTour extends StatefulWidget {
   final List<TourTarget> tourTargets;
@@ -53,6 +59,7 @@ class _FlutterTourState extends State<FlutterTour> {
   int activePosition = 0;
   late bool? tourVisible;
   CardPosition cardPosition = CardPosition();
+  ArrowAnchor? arrowAnchors;
 
   @override
   void initState() {
@@ -73,10 +80,17 @@ class _FlutterTourState extends State<FlutterTour> {
         if (widget.child != null) widget.child as Widget,
         if (_tourVisible())
           CustomPaint(
-            painter: Painter(widgetPosition: _getWidgetPosition()),
-            size: MediaQuery
-                .of(context)
-                .size,
+            painter: OverlayPainter(widgetPosition: _getWidgetPosition()),
+            size: MediaQuery.of(context).size,
+          ),
+        if (_tourVisible())
+          CustomPaint(
+            painter: ArrowPainter(
+                arrowColor: Colors.white,
+                cardPosition: cardPosition,
+                widgetAnchors: arrowAnchors,
+                widgetPosition: _getWidgetPosition()),
+            size: MediaQuery.of(context).size,
           ),
         if (_tourVisible())
           Positioned(
@@ -87,6 +101,7 @@ class _FlutterTourState extends State<FlutterTour> {
             child: SizedBox(
               width: cardWidth,
               child: Card(
+                key: keyCard,
                 color: widget.cardBackgroundColor,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -100,7 +115,16 @@ class _FlutterTourState extends State<FlutterTour> {
                       const SizedBox(height: 8.0),
                       Row(
                         children: [
+                          if (widget.showBackButton)
+                            Expanded(
+                              child: OutlinedButton(
+                                  onPressed: () => _showPreviousWidget(),
+                                  style: _buttonStyle(buttonColor: widget.cardOptionalButtonColor),
+                                  child: widget.cardOptionalButtonText ?? const Text('')),
+                            ),
+                          if (widget.showBackButton) const SizedBox(width: 8.0),
                           Expanded(
+                            flex: 1,
                             child: OutlinedButton(
                                 onPressed: () => _showNextWidget(),
                                 style: _buttonStyle(buttonColor: widget.cardButtonOneColor),
@@ -108,22 +132,8 @@ class _FlutterTourState extends State<FlutterTour> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8.0),
-                      if (widget.showBackButton)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                  onPressed: () => _showPreviousWidget(),
-                                  style: _buttonStyle(buttonColor: widget.cardOptionalButtonColor),
-                                  child: widget.cardOptionalButtonText ?? const Text('')),
-                            ),
-                          ],
-                        ),
-                      if (widget.showBackButton)
-                        const SizedBox(
-                          height: 8.0,
-                        ),
+                      const SizedBox(),
+                      if (widget.showBackButton) const SizedBox(),
                       Row(
                         children: [
                           Expanded(
@@ -145,7 +155,7 @@ class _FlutterTourState extends State<FlutterTour> {
                 ),
               ),
             ),
-          )
+          ),
       ],
     );
   }
@@ -198,7 +208,7 @@ class _FlutterTourState extends State<FlutterTour> {
           bottom: (position.dy - offset) + renderBox.size.height,
         );
 
-        _positionCard(mediaQuery, widgetPosition);
+        _positionCard(mediaQuery, widgetPosition, renderBox);
         return widgetPosition;
       }
     } else {
@@ -209,20 +219,49 @@ class _FlutterTourState extends State<FlutterTour> {
     return WidgetPosition(left: 0, top: 0, right: 0, bottom: 0);
   }
 
-  void _positionCard(MediaQueryData mediaQuery, WidgetPosition widgetPosition) {
+  /*
+  currentWidgetTop = widgetTop - scrollOffset (available space on top)
+  currentWidgetBottom = (widgetTop + widgetHeight) - scrollOffset
+  availableSpaceBottom = screenHeight - currentWidgetBottom
+   */
+
+  void _positionCard(MediaQueryData mediaQuery, WidgetPosition widgetPosition, RenderBox targetRenderBox) {
     final halfScreenSize = mediaQuery.size.height / 2;
     final cardHorizontalSpacing = mediaQuery.size.width - cardWidth;
-    if (widgetPosition.bottom > halfScreenSize) {
+    final validTargetWidget = targetRenderBox.size.height < halfScreenSize;
+    if (validTargetWidget) {
+      if (widgetPosition.bottom > halfScreenSize) {
+        cardPosition = CardPosition(
+          left: 16.0,
+          right: cardHorizontalSpacing,
+          bottom: mediaQuery.size.height - widgetPosition.top,
+        );
+      } else if (widgetPosition.top < halfScreenSize) {
+        cardPosition = CardPosition(
+          left: cardHorizontalSpacing,
+          right: 16.0,
+          top: widgetPosition.bottom,
+        );
+        final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
+        if (cardRenderBox?.hasSize ?? false) {
+          final halfCardHeight = (cardRenderBox?.size.height ?? 0.0) / 2;
+          final startArrowDx = (cardPosition.right ?? 0.0);
+          final startArrowDy = (cardPosition.bottom ?? 0.0) + halfCardHeight;
+          arrowAnchors?.anchorStart = Point(startArrowDx, startArrowDy);
+          final endArrowDx = widgetPosition.left + (targetRenderBox.size.width * (3 / 4));
+          final endArrowDy = widgetPosition.top;
+          arrowAnchors?.anchorEnd = Point(endArrowDx, endArrowDy);
+
+          const radian = 90.0 * ((2 * pi) / 360);
+
+          Point controlPoint = Point(halfCardHeight * cos(radian), halfCardHeight * sin(radian));
+          arrowAnchors?.arrowControlPoint = controlPoint;
+        }
+      }
+    } else {
       cardPosition = CardPosition(
         left: 16.0,
-        right: cardHorizontalSpacing,
-        bottom: mediaQuery.size.height - widgetPosition.top,
-      );
-    } else if (widgetPosition.top < halfScreenSize) {
-      cardPosition = CardPosition(
-        left: cardHorizontalSpacing,
-        right: 16.0,
-        top: widgetPosition.bottom,
+        bottom: 16.0,
       );
     }
   }
