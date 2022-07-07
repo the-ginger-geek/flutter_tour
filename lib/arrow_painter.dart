@@ -53,9 +53,9 @@ class ArrowPainter extends CustomPainter {
       ], false);
     } else if (cardOnTop) {
       path.addPolygon([
-        Offset(anchorEndX - 5, anchorEndY - 3),
-        Offset(anchorEndX + 3, anchorEndY + (cardOnTop ? -5 : 5)),
-        Offset(anchorEndX + 5, anchorEndY + 3),
+        Offset(anchorEndX - 5, anchorEndY - (cardOnLeft ? -3 : 3)),
+        Offset(anchorEndX + (cardOnLeft ? -3 : 3), anchorEndY + (cardOnTop ? -5 : 5)),
+        Offset(anchorEndX + 5, anchorEndY + (cardOnLeft ? -3 : 3)),
       ], false);
     } else {
       path.addPolygon([

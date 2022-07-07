@@ -271,10 +271,12 @@ class FlutterTourState extends State<FlutterTour> {
           bottom: bottom,
         );
       } else if (widgetRect.top < halfScreenSize) {
+        const padding = 16.0;
+        final drawCardOnRight = widgetRect.right < (padding + cardHorizontalSpacing);
         final top = widgetRect.bottom;
         cardRect = CardRect(
-          left: cardHorizontalSpacing,
-          right: 16.0,
+          left: drawCardOnRight ? cardHorizontalSpacing : padding,
+          right: drawCardOnRight ? padding : cardHorizontalSpacing,
           top: top,
         );
       }
