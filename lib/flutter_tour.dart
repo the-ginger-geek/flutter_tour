@@ -38,8 +38,9 @@ class _FlutterTourState extends State<FlutterTour> {
   int activePosition = 0;
   late bool? tourVisible = true;
   CardPosition cardPosition = CardPosition();
-  ArrowAnchor? arrowAnchors;
   List<TourTarget> tourTargets = [];
+  ArrowAnchor? arrowAnchors = ArrowAnchor(
+      anchorStart: const Point(0.0, 0.0), anchorEnd: const Point(0.0, 0.0), arrowControlPoint: const Point(0.0, 0.0));
 
   @override
   void initState() {
@@ -231,28 +232,30 @@ class _FlutterTourState extends State<FlutterTour> {
           right: cardHorizontalSpacing,
           bottom: mediaQuery.size.height - widgetPosition.top,
         );
-      } else if (widgetPosition.top < halfScreenSize) {
-        cardPosition = CardPosition(
-          left: cardHorizontalSpacing,
-          right: 16.0,
-          top: widgetPosition.bottom,
-        );
+
         final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
         if (cardRenderBox?.hasSize ?? false) {
           final halfCardHeight = (cardRenderBox?.size.height ?? 0.0) / 2;
-          final startArrowDx = (cardPosition.right ?? 0.0);
-          final startArrowDy = (cardPosition.bottom ?? 0.0) + halfCardHeight;
+
+          final startArrowDx = mediaQuery.size.width - (cardPosition.right ?? 0.0);
+          final startArrowDy = mediaQuery.size.height - (cardPosition.bottom ?? 0.0) - halfCardHeight;
           arrowAnchors?.anchorStart = Point(startArrowDx, startArrowDy);
+
           final endArrowDx = widgetPosition.left + (targetRenderBox.size.width * (3 / 4));
           final endArrowDy = widgetPosition.top;
           arrowAnchors?.anchorEnd = Point(endArrowDx, endArrowDy);
 
-          const radian = 90.0 * ((2 * pi) / 360);
-
-          Point controlPoint = Point(halfCardHeight * cos(radian), halfCardHeight * sin(radian));
-          arrowAnchors?.arrowControlPoint = controlPoint;
+          final controlPointDx = startArrowDx + (cardWidth / 2);
+          final controlPointDy = widgetPosition.top - halfCardHeight;
+          arrowAnchors?.arrowControlPoint = Point(controlPointDx, controlPointDy);
         }
       }
+    } else if (widgetPosition.top < halfScreenSize) {
+      cardPosition = CardPosition(
+        left: cardHorizontalSpacing,
+        right: 16.0,
+        top: widgetPosition.bottom,
+      );
     } else {
       cardPosition = CardPosition(
         left: 16.0,

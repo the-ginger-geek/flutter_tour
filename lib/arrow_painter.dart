@@ -24,7 +24,7 @@ class ArrowPainter extends CustomPainter {
       ..strokeWidth = 2.0;
 
     // final bool cardPositionRight = (cardPosition.left ?? 0.0) > (cardPosition.right ?? 0.0);
-    final bool cardPositionTop = (cardPosition.top ?? 0.0) > (cardPosition.bottom ?? 0.0);
+    final bool cardPositionTop = (cardPosition.bottom ?? 0.0) > (cardPosition.top ?? 0.0);
     if (cardPositionTop == true) {
 
       final controlPointX = widgetAnchors?.arrowControlPoint?.x as double;
