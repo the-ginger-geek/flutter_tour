@@ -91,7 +91,8 @@ class ArrowPainter extends CustomPainter {
 
     final endPositionOnBottomOfWidget = isLargeWidget || cardOnTop;
     final endArrowDx = arrowConfig.widgetRect.left + (arrowConfig.widgetRect.size.width * (cardOnTop ? 0.1 : 0.9));
-    final endArrowDy = endPositionOnBottomOfWidget ? arrowConfig.widgetRect.bottom : arrowConfig.widgetRect.top;
+    final endArrowDy = endPositionOnBottomOfWidget ? arrowConfig.widgetRect.bottom + 10 : arrowConfig.widgetRect.top
+        - 10;
     arrowAnchors.anchorEnd = Point(endArrowDx, endArrowDy);
 
     final cardWidth = cardPosition.size?.width ?? 0;

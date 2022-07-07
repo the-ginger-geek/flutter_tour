@@ -4,26 +4,30 @@ class TourTheme {
   final TextStyle? cardTitleStyle;
   final TextStyle? cardDescriptionStyle;
   final Color? cardBackgroundColor;
-  final Text? cardButtonOneText;
-  final Text? cardOptionalButtonText;
-  final Text? cardButtonTwoText;
-  final Color? cardButtonOneColor;
-  final Color? cardButtonTwoColor;
-  final Color? cardOptionalButtonColor;
-  final Color? cardButtonTwoBorderColor;
+  final Text? cardButtonNextText;
+  final Color? cardButtonNextColor;
+  final Text? cardButtonBackText;
+  final Color? cardButtonBackColor;
   final bool? showBackButton;
+  final Text? cardButtonSkipText;
+  final Color? cardButtonSkipColor;
+  final Color? cardButtonSkipBorderColor;
+  final Text? cardButtonFinishText;
+  final Color? cardButtonFinishColor;
 
   TourTheme({
     this.cardTitleStyle,
     this.cardDescriptionStyle,
     this.cardBackgroundColor,
-    this.cardButtonOneText,
-    this.cardOptionalButtonText,
-    this.cardButtonTwoText,
-    this.cardButtonOneColor,
-    this.cardButtonTwoColor,
-    this.cardOptionalButtonColor,
-    this.cardButtonTwoBorderColor,
+    this.cardButtonNextText,
+    this.cardButtonBackText,
+    this.cardButtonSkipText,
+    this.cardButtonNextColor,
+    this.cardButtonSkipColor,
+    this.cardButtonBackColor,
+    this.cardButtonSkipBorderColor,
     this.showBackButton,
+    this.cardButtonFinishText,
+    this.cardButtonFinishColor,
   });
 }

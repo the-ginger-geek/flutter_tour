@@ -15,7 +15,7 @@ class FlutterTour extends StatefulWidget {
   final Widget? child;
   final bool? showTour;
   final TourTheme? tourTheme;
-  final void Function()? buttonTwoOnPressed;
+  final void Function()? completeCallback;
 
   const FlutterTour({
     Key? key,
@@ -23,14 +23,14 @@ class FlutterTour extends StatefulWidget {
     this.tourTheme,
     this.child,
     this.showTour = false,
-    this.buttonTwoOnPressed,
+    this.completeCallback,
   }) : super(key: key);
 
   @override
-  State<FlutterTour> createState() => _FlutterTourState();
+  State<FlutterTour> createState() => FlutterTourState();
 }
 
-class _FlutterTourState extends State<FlutterTour> {
+class FlutterTourState extends State<FlutterTour> {
   final double cardWidth = 250;
   int activePosition = 0;
   late bool? tourVisible = true;
@@ -40,7 +40,7 @@ class _FlutterTourState extends State<FlutterTour> {
   @override
   void initState() {
     super.initState();
-    // tourVisible = widget.showTour;
+    tourVisible = widget.showTour;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       tourTargets.addAll(widget.tourTargets);
       setState(() {});
@@ -50,36 +50,60 @@ class _FlutterTourState extends State<FlutterTour> {
   @override
   Widget build(BuildContext context) {
     final widgetRect = _getWidgetRect();
+    // Card is drawn after the initial render so we need to wait for it to be drawn before we can get size
+    final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
     return Stack(
       children: [
         if (widget.child != null) widget.child as Widget,
         if (_tourVisible()) _buildOverlayPainter(context, widgetRect),
-        if (_tourVisible() && cardRect.isInitialised) _buildArrowPainter(context, widgetRect),
+        if (_tourVisible() && (cardRenderBox?.hasSize ?? false))
+          _buildArrowPainter(
+            context,
+            widgetRect,
+            cardRenderBox?.size,
+          ),
         if (_tourVisible() && cardRect.isInitialised) _buildTourCard(),
       ],
     );
   }
 
+  void showTour(bool show) {
+    tourVisible = show;
+    setState(() {});
+  }
+
+  void updateTargets(List<TourTarget> targets) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      tourTargets.clear();
+      tourTargets.addAll(targets);
+      setState(() {});
+    });
+  }
+
   CustomPaint _buildOverlayPainter(BuildContext context, WidgetRect widgetRect) {
     return CustomPaint(
       painter: OverlayPainter(widgetRect: widgetRect),
-      size: MediaQuery.of(context).size,
+      size: MediaQuery
+          .of(context)
+          .size,
     );
   }
 
-  CustomPaint _buildArrowPainter(BuildContext context, WidgetRect widgetRect) {
-    // Card is drawn after the initial render so we need to wait for it to be drawn before we can get size
-    final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
+  CustomPaint _buildArrowPainter(BuildContext context, WidgetRect widgetRect, Size? cardSize) {
     return CustomPaint(
       painter: ArrowPainter(
         arrowColor: Colors.white,
         arrowConfig: ArrowConfig(
-          cardPosition: cardRect..size = cardRenderBox?.size ?? Size(0, 0),
+          cardPosition: cardRect..size = cardSize ?? const Size(0, 0),
           widgetRect: widgetRect,
-          screenSize: MediaQuery.of(context).size,
+          screenSize: MediaQuery
+              .of(context)
+              .size,
         ),
       ),
-      size: MediaQuery.of(context).size,
+      size: MediaQuery
+          .of(context)
+          .size,
     );
   }
 
@@ -115,44 +139,51 @@ class _FlutterTourState extends State<FlutterTour> {
   }
 
   Row _buildSkipButton() {
+    final isLastButton = activePosition == tourTargets.length - 1;
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () {
-              setState(() {
-                tourVisible = false;
-              });
-            },
-            style: _buttonStyle(
-              buttonColor: widget.tourTheme?.cardButtonTwoColor,
-              buttonBorderColor: widget.tourTheme?.cardButtonTwoBorderColor,
+        if (!isLastButton)
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _endTour,
+              style: OutlinedButton.styleFrom(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(24)),
+                ),
+                backgroundColor: widget.tourTheme?.cardButtonSkipColor,
+                side: BorderSide(
+                  color: widget.tourTheme?.cardButtonSkipBorderColor ?? Colors.black,
+                  width: 0.8,
+                ),
+              ),
+              child: widget.tourTheme?.cardButtonSkipText ?? const Text('Skip'),
             ),
-            child: widget.tourTheme?.cardButtonTwoText ?? const Text('Skip'),
           ),
-        ),
       ],
     );
   }
 
   Row _buildNavigationButtons() {
+    final isNotLastButton = activePosition < tourTargets.length - 1;
     return Row(
       children: [
         if (widget.tourTheme?.showBackButton ?? false)
           Expanded(
             child: OutlinedButton(
               onPressed: () => _showPreviousWidget(),
-              style: _buttonStyle(buttonColor: widget.tourTheme?.cardOptionalButtonColor),
-              child: widget.tourTheme?.cardOptionalButtonText ?? const Text('Back'),
+              style: _buttonStyle(buttonColor: widget.tourTheme?.cardButtonBackColor),
+              child: widget.tourTheme?.cardButtonBackText ?? const Text('Back'),
             ),
           ),
         if (widget.tourTheme?.showBackButton ?? false) const SizedBox(width: 8.0),
         Expanded(
           flex: 1,
           child: OutlinedButton(
-            onPressed: () => _showNextWidget(),
-            style: _buttonStyle(buttonColor: widget.tourTheme?.cardButtonOneColor),
-            child: widget.tourTheme?.cardButtonOneText ?? const Text('Next'),
+            onPressed: isNotLastButton ? () => _showNextWidget() : _endTour,
+            style: _buttonStyle(buttonColor: isNotLastButton ? widget.tourTheme?.cardButtonNextColor : widget.tourTheme
+                ?.cardButtonFinishColor),
+            child: isNotLastButton ? widget.tourTheme?.cardButtonNextText ?? const Text('Next') :
+            widget.tourTheme?.cardButtonFinishText ?? const Text('Finish'),
           ),
         ),
       ],
@@ -209,8 +240,6 @@ class _FlutterTourState extends State<FlutterTour> {
           _positionCard(widgetRect);
           return widgetRect;
         }
-      } else {
-        return _getWidgetRect();
       }
     }
 
@@ -224,7 +253,9 @@ class _FlutterTourState extends State<FlutterTour> {
   }
 
   void _positionCard(WidgetRect widgetRect) {
-    final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery
+        .of(context)
+        .size;
     final halfScreenSize = screenSize.height / 2;
     final cardHorizontalSpacing = screenSize.width - cardWidth;
     final validTargetWidget = widgetRect.size.height < halfScreenSize;
@@ -264,5 +295,12 @@ class _FlutterTourState extends State<FlutterTour> {
         ),
       ),
     );
+  }
+
+  void _endTour() {
+    setState(() {
+      tourVisible = false;
+    });
+    widget.completeCallback?.call();
   }
 }
