@@ -40,8 +40,11 @@ class ArrowPainter extends CustomPainter {
     double anchorEndX,
     double anchorEndY,
   ) {
+    final cardPosition = arrowConfig.cardPosition;
+    final cardOnLeft = cardPosition.right == null || (cardPosition.left ?? 0) < (cardPosition.right ?? 0);
     final isLargeWidget = arrowConfig.widgetRect.size.height > arrowConfig.screenSize.height * 0.5;
     final cardOnTop = arrowConfig.cardPosition.bottom == null;
+
     if (isLargeWidget) {
       path.addPolygon([
         Offset(anchorEndX - 5, anchorEndY + 3),
@@ -56,9 +59,9 @@ class ArrowPainter extends CustomPainter {
       ], false);
     } else {
       path.addPolygon([
-        Offset(anchorEndX - 5, anchorEndY - 3),
-        Offset(anchorEndX - 3, anchorEndY + 5),
-        Offset(anchorEndX + 5, anchorEndY + 3),
+        Offset(anchorEndX - 5, anchorEndY - (cardOnLeft ? 3 : -3)),
+        Offset(anchorEndX - (cardOnLeft ? 3 : -3), anchorEndY + 5),
+        Offset(anchorEndX + 5, anchorEndY + (cardOnLeft ? 3 : -3)),
       ], false);
     }
   }
@@ -74,30 +77,29 @@ class ArrowPainter extends CustomPainter {
     final isLargeWidget = widgetRect.size.height > arrowConfig.screenSize.height * 0.5;
     final cardPosition = arrowConfig.cardPosition;
     final cardOnTop = cardPosition.bottom == null;
-    final cardOnLeft = (cardPosition.left ?? 0) < (cardPosition.right ?? 0);
+    final cardOnLeft = cardPosition.right == null || (cardPosition.left ?? 0) < (cardPosition.right ?? 0);
     final halfCardHeight = (cardPosition.size?.height ?? 0.0) / 2;
-    final halfCardWidth = (cardPosition.size?.width ?? 0.0) / 2;
     final cardVerticalPosition = cardPosition.bottom ?? cardPosition.top ?? 0;
     final cardHorizontalPosition =
-        ((cardPosition.right ?? 0) < (cardPosition.left ?? 0)) ? cardPosition.left ?? 0 : cardPosition.right ?? 0;
+        cardOnLeft ? cardPosition.left ?? 0 : cardPosition.right ?? 0;
 
     final startArrowDx = cardOnLeft
-        ? cardHorizontalPosition + halfCardWidth
-        : arrowConfig.screenSize.width - cardHorizontalPosition - halfCardWidth;
+        ? cardHorizontalPosition + (cardPosition.size?.width ?? 0)
+        : arrowConfig.screenSize.width - (cardPosition.size?.width ?? 0);
     final startArrowDy = cardOnTop
         ? (cardPosition.top ?? 0) + halfCardHeight
         : arrowConfig.screenSize.height - cardVerticalPosition - halfCardHeight;
     arrowAnchors.anchorStart = Point(startArrowDx, startArrowDy);
 
     final endPositionOnBottomOfWidget = isLargeWidget || cardOnTop;
-    final endArrowDx = arrowConfig.widgetRect.left + (arrowConfig.widgetRect.size.width * (cardOnTop ? 0.1 : 0.9));
+    final endArrowDx = arrowConfig.widgetRect.left + (arrowConfig.widgetRect.size.width * (cardOnLeft ? 0.9 : 0.1));
     final endArrowDy = endPositionOnBottomOfWidget ? arrowConfig.widgetRect.bottom + 10 : arrowConfig.widgetRect.top
         - 10;
     arrowAnchors.anchorEnd = Point(endArrowDx, endArrowDy);
 
     final cardWidth = cardPosition.size?.width ?? 0;
     if (cardWidth != 0) {
-      final controlPointDx = cardOnTop ? startArrowDx - (cardWidth / 2) : startArrowDx + (cardWidth / 2);
+      final controlPointDx = !cardOnLeft ? startArrowDx - (cardWidth / 2) : startArrowDx + (cardWidth / 2);
       final controlPointDy = endPositionOnBottomOfWidget
           ? arrowConfig.widgetRect.bottom + halfCardHeight
           : arrowConfig.widgetRect.top - halfCardHeight;

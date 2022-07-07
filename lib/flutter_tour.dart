@@ -107,7 +107,7 @@ class FlutterTourState extends State<FlutterTour> {
     );
   }
 
-  Positioned _buildTourCard() {
+  Widget _buildTourCard() {
     return Positioned(
       left: cardRect.left,
       top: cardRect.top,
@@ -165,9 +165,10 @@ class FlutterTourState extends State<FlutterTour> {
 
   Row _buildNavigationButtons() {
     final isNotLastButton = activePosition < tourTargets.length - 1;
+    final backButtonVisible = (widget.tourTheme?.showBackButton ?? false) && activePosition > 0;
     return Row(
       children: [
-        if (widget.tourTheme?.showBackButton ?? false)
+        if (backButtonVisible)
           Expanded(
             child: OutlinedButton(
               onPressed: () => _showPreviousWidget(),
@@ -175,7 +176,7 @@ class FlutterTourState extends State<FlutterTour> {
               child: widget.tourTheme?.cardButtonBackText ?? const Text('Back'),
             ),
           ),
-        if (widget.tourTheme?.showBackButton ?? false) const SizedBox(width: 8.0),
+        if (backButtonVisible) const SizedBox(width: 8.0),
         Expanded(
           flex: 1,
           child: OutlinedButton(
@@ -261,12 +262,12 @@ class FlutterTourState extends State<FlutterTour> {
     final validTargetWidget = widgetRect.size.height < halfScreenSize;
     if (validTargetWidget) {
       if (widgetRect.bottom > halfScreenSize) {
-        const left = 16.0;
-        final right = cardHorizontalSpacing;
+        const padding = 16.0;
+        final drawCardOnRight = widgetRect.right < (padding + cardHorizontalSpacing);
         final bottom = screenSize.height - widgetRect.top;
         cardRect = CardRect(
-          left: left,
-          right: right,
+          left: drawCardOnRight ? cardHorizontalSpacing : padding,
+          right: drawCardOnRight ? padding : cardHorizontalSpacing,
           bottom: bottom,
         );
       } else if (widgetRect.top < halfScreenSize) {
