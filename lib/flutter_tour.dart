@@ -1,15 +1,12 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_tour/arrow_anchor.dart';
 import 'package:flutter_tour/globalkey_extension.dart';
 
 import 'arrow_painter.dart';
-import 'card_position.dart';
+import 'card_rect.dart';
 import 'overlay_painter.dart';
 import 'tour_target.dart';
 import 'tour_theme.dart';
-import 'widget_position.dart';
+import 'widget_rect.dart';
 
 final keyCard = GlobalKey();
 
@@ -37,10 +34,8 @@ class _FlutterTourState extends State<FlutterTour> {
   final double cardWidth = 250;
   int activePosition = 0;
   late bool? tourVisible = true;
-  CardPosition cardPosition = CardPosition();
+  CardRect cardRect = CardRect();
   List<TourTarget> tourTargets = [];
-  ArrowAnchor? arrowAnchors = ArrowAnchor(
-      anchorStart: const Point(0.0, 0.0), anchorEnd: const Point(0.0, 0.0), arrowControlPoint: const Point(0.0, 0.0));
 
   @override
   void initState() {
@@ -54,40 +49,46 @@ class _FlutterTourState extends State<FlutterTour> {
 
   @override
   Widget build(BuildContext context) {
+    final widgetRect = _getWidgetRect();
     return Stack(
       children: [
         if (widget.child != null) widget.child as Widget,
-        if (_tourVisible()) _buildOverlayPainter(context),
-        if (_tourVisible()) _buildArrowPainter(context),
-        if (_tourVisible() && cardPosition.isInitialised) _buildTourCard(),
+        if (_tourVisible()) _buildOverlayPainter(context, widgetRect),
+        if (_tourVisible() && cardRect.isInitialised) _buildArrowPainter(context, widgetRect),
+        if (_tourVisible() && cardRect.isInitialised) _buildTourCard(),
       ],
     );
   }
 
-  CustomPaint _buildOverlayPainter(BuildContext context) {
+  CustomPaint _buildOverlayPainter(BuildContext context, WidgetRect widgetRect) {
     return CustomPaint(
-      painter: OverlayPainter(widgetPosition: _getWidgetPosition()),
+      painter: OverlayPainter(widgetRect: widgetRect),
       size: MediaQuery.of(context).size,
     );
   }
 
-  CustomPaint _buildArrowPainter(BuildContext context) {
+  CustomPaint _buildArrowPainter(BuildContext context, WidgetRect widgetRect) {
+    // Card is drawn after the initial render so we need to wait for it to be drawn before we can get size
+    final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
     return CustomPaint(
       painter: ArrowPainter(
-          arrowColor: Colors.white,
-          cardPosition: cardPosition,
-          widgetAnchors: arrowAnchors,
-          widgetPosition: _getWidgetPosition()),
+        arrowColor: Colors.white,
+        arrowConfig: ArrowConfig(
+          cardPosition: cardRect..size = cardRenderBox?.size ?? Size(0, 0),
+          widgetRect: widgetRect,
+          screenSize: MediaQuery.of(context).size,
+        ),
+      ),
       size: MediaQuery.of(context).size,
     );
   }
 
   Positioned _buildTourCard() {
     return Positioned(
-      left: cardPosition.left,
-      top: cardPosition.top,
-      right: cardPosition.right,
-      bottom: cardPosition.bottom,
+      left: cardRect.left,
+      top: cardRect.top,
+      right: cardRect.right,
+      bottom: cardRect.bottom,
       child: SizedBox(
         width: cardWidth,
         child: Card(
@@ -165,8 +166,6 @@ class _FlutterTourState extends State<FlutterTour> {
   void _showNextWidget({bool refreshState = true}) {
     if (activePosition < tourTargets.length - 1) {
       activePosition++;
-    } else {
-      activePosition = 0;
     }
 
     final widgetBuildContext = tourTargets[activePosition].key.currentContext;
@@ -179,10 +178,8 @@ class _FlutterTourState extends State<FlutterTour> {
   }
 
   void _showPreviousWidget({bool refreshState = true}) {
-    if (activePosition < tourTargets.length - 1 && activePosition > 0) {
+    if (activePosition < tourTargets.length && activePosition > 0) {
       activePosition--;
-    } else {
-      activePosition = 0;
     }
 
     final widgetBuildContext = tourTargets[activePosition].key.currentContext;
@@ -194,70 +191,63 @@ class _FlutterTourState extends State<FlutterTour> {
     }
   }
 
-  WidgetPosition _getWidgetPosition() {
+  WidgetRect _getWidgetRect() {
     if (tourTargets.isNotEmpty && tourTargets.length > activePosition) {
-      final mediaQuery = MediaQuery.of(context);
       final key = tourTargets[activePosition].key;
       final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox?.hasSize ?? false) {
         final position = key.globalPaintBounds;
         if (position != null && renderBox != null) {
-          final widgetPosition = WidgetPosition(
+          final widgetRect = WidgetRect(
             left: position.left,
             top: position.top,
             right: position.right,
             bottom: position.bottom,
+            size: renderBox.size,
           );
 
-          _positionCard(mediaQuery, widgetPosition, renderBox);
-          return widgetPosition;
+          _positionCard(widgetRect);
+          return widgetRect;
         }
       } else {
-        _showNextWidget(refreshState: false);
-        return _getWidgetPosition();
+        return _getWidgetRect();
       }
     }
 
-    return WidgetPosition(left: 0, top: 0, right: 0, bottom: 0);
+    return WidgetRect(
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      size: const Size(0.0, 0.0),
+    );
   }
 
-  void _positionCard(MediaQueryData mediaQuery, WidgetPosition widgetPosition, RenderBox targetRenderBox) {
-    final halfScreenSize = mediaQuery.size.height / 2;
-    final cardHorizontalSpacing = mediaQuery.size.width - cardWidth;
-    final validTargetWidget = targetRenderBox.size.height < halfScreenSize;
+  void _positionCard(WidgetRect widgetRect) {
+    final screenSize = MediaQuery.of(context).size;
+    final halfScreenSize = screenSize.height / 2;
+    final cardHorizontalSpacing = screenSize.width - cardWidth;
+    final validTargetWidget = widgetRect.size.height < halfScreenSize;
     if (validTargetWidget) {
-      if (widgetPosition.bottom > halfScreenSize) {
-        cardPosition = CardPosition(
-          left: 16.0,
-          right: cardHorizontalSpacing,
-          bottom: mediaQuery.size.height - widgetPosition.top,
+      if (widgetRect.bottom > halfScreenSize) {
+        const left = 16.0;
+        final right = cardHorizontalSpacing;
+        final bottom = screenSize.height - widgetRect.top;
+        cardRect = CardRect(
+          left: left,
+          right: right,
+          bottom: bottom,
         );
-
-        final cardRenderBox = keyCard.currentContext?.findRenderObject() as RenderBox?;
-        if (cardRenderBox?.hasSize ?? false) {
-          final halfCardHeight = (cardRenderBox?.size.height ?? 0.0) / 2;
-
-          final startArrowDx = mediaQuery.size.width - (cardPosition.right ?? 0.0);
-          final startArrowDy = mediaQuery.size.height - (cardPosition.bottom ?? 0.0) - halfCardHeight;
-          arrowAnchors?.anchorStart = Point(startArrowDx, startArrowDy);
-
-          final endArrowDx = widgetPosition.left + (targetRenderBox.size.width * (3 / 4));
-          final endArrowDy = widgetPosition.top;
-          arrowAnchors?.anchorEnd = Point(endArrowDx, endArrowDy);
-
-          final controlPointDx = startArrowDx + (cardWidth / 2);
-          final controlPointDy = widgetPosition.top - halfCardHeight;
-          arrowAnchors?.arrowControlPoint = Point(controlPointDx, controlPointDy);
-        }
+      } else if (widgetRect.top < halfScreenSize) {
+        final top = widgetRect.bottom;
+        cardRect = CardRect(
+          left: cardHorizontalSpacing,
+          right: 16.0,
+          top: top,
+        );
       }
-    } else if (widgetPosition.top < halfScreenSize) {
-      cardPosition = CardPosition(
-        left: cardHorizontalSpacing,
-        right: 16.0,
-        top: widgetPosition.bottom,
-      );
     } else {
-      cardPosition = CardPosition(
+      cardRect = CardRect(
         left: 16.0,
         bottom: 16.0,
       );

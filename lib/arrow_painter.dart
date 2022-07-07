@@ -1,20 +1,19 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_tour/card_position.dart';
+import 'package:flutter_tour/card_rect.dart';
 import 'package:flutter_tour/arrow_anchor.dart';
 
-import 'widget_position.dart';
+import 'widget_rect.dart';
 
 class ArrowPainter extends CustomPainter {
-  final WidgetPosition widgetPosition;
-  final CardPosition cardPosition;
-  final ArrowAnchor? widgetAnchors;
+  final ArrowConfig arrowConfig;
   final Color arrowColor;
 
-  ArrowPainter(
-      {required this.widgetPosition,
-      required this.arrowColor,
-      required this.cardPosition,
-      required this.widgetAnchors});
+  ArrowPainter({
+    required this.arrowConfig,
+    required this.arrowColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -23,24 +22,103 @@ class ArrowPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    // final bool cardPositionRight = (cardPosition.left ?? 0.0) > (cardPosition.right ?? 0.0);
-    final bool cardPositionTop = (cardPosition.bottom ?? 0.0) > (cardPosition.top ?? 0.0);
-    if (cardPositionTop == true) {
+    final anchors = _calculateArrowAnchor();
+    final controlPointX = anchors.arrowControlPoint?.x as double;
+    final controlPointY = anchors.arrowControlPoint?.y as double;
+    final anchorEndX = anchors.anchorEnd?.x as double;
+    final anchorEndY = anchors.anchorEnd?.y as double;
 
-      final controlPointX = widgetAnchors?.arrowControlPoint?.x as double;
-      final controlPointY = widgetAnchors?.arrowControlPoint?.y as double;
-      final anchorEndX = widgetAnchors?.anchorEnd?.x as double;
-      final anchorEndY = widgetAnchors?.anchorEnd?.y as double;
+    Path path = Path();
+    path.moveTo((anchors.anchorStart?.x as double), anchors.anchorStart?.y as double);
+    path.quadraticBezierTo(controlPointX, controlPointY, anchorEndX, anchorEndY);
+    _buildArrowHead(path, anchorEndX, anchorEndY);
+    canvas.drawPath(path, paint);
+  }
 
-      Path path = Path();
-      path.moveTo((widgetAnchors?.anchorStart?.x as double), widgetAnchors?.anchorStart?.y as double);
-      path.quadraticBezierTo(controlPointX, controlPointY, anchorEndX, anchorEndY);
-      canvas.drawPath(path, paint);
+  void _buildArrowHead(
+    Path path,
+    double anchorEndX,
+    double anchorEndY,
+  ) {
+    final isLargeWidget = arrowConfig.widgetRect.size.height > arrowConfig.screenSize.height * 0.5;
+    final cardOnTop = arrowConfig.cardPosition.bottom == null;
+    if (isLargeWidget) {
+      path.addPolygon([
+        Offset(anchorEndX - 5, anchorEndY + 3),
+        Offset(anchorEndX - 3, anchorEndY - 5),
+        Offset(anchorEndX + 5, anchorEndY - 3),
+      ], false);
+    } else if (cardOnTop) {
+      path.addPolygon([
+        Offset(anchorEndX - 5, anchorEndY - 3),
+        Offset(anchorEndX + 3, anchorEndY + (cardOnTop ? -5 : 5)),
+        Offset(anchorEndX + 5, anchorEndY + 3),
+      ], false);
+    } else {
+      path.addPolygon([
+        Offset(anchorEndX - 5, anchorEndY - 3),
+        Offset(anchorEndX - 3, anchorEndY + 5),
+        Offset(anchorEndX + 5, anchorEndY + 3),
+      ], false);
     }
+  }
+
+  ArrowAnchor _calculateArrowAnchor() {
+    ArrowAnchor arrowAnchors = ArrowAnchor(
+      anchorStart: const Point(0.0, 0.0),
+      anchorEnd: const Point(0.0, 0.0),
+      arrowControlPoint: const Point(0.0, 0.0),
+    );
+
+    final widgetRect = arrowConfig.widgetRect;
+    final isLargeWidget = widgetRect.size.height > arrowConfig.screenSize.height * 0.5;
+    final cardPosition = arrowConfig.cardPosition;
+    final cardOnTop = cardPosition.bottom == null;
+    final cardOnLeft = (cardPosition.left ?? 0) < (cardPosition.right ?? 0);
+    final halfCardHeight = (cardPosition.size?.height ?? 0.0) / 2;
+    final halfCardWidth = (cardPosition.size?.width ?? 0.0) / 2;
+    final cardVerticalPosition = cardPosition.bottom ?? cardPosition.top ?? 0;
+    final cardHorizontalPosition =
+        ((cardPosition.right ?? 0) < (cardPosition.left ?? 0)) ? cardPosition.left ?? 0 : cardPosition.right ?? 0;
+
+    final startArrowDx = cardOnLeft
+        ? cardHorizontalPosition + halfCardWidth
+        : arrowConfig.screenSize.width - cardHorizontalPosition - halfCardWidth;
+    final startArrowDy = cardOnTop
+        ? (cardPosition.top ?? 0) + halfCardHeight
+        : arrowConfig.screenSize.height - cardVerticalPosition - halfCardHeight;
+    arrowAnchors.anchorStart = Point(startArrowDx, startArrowDy);
+
+    final endPositionOnBottomOfWidget = isLargeWidget || cardOnTop;
+    final endArrowDx = arrowConfig.widgetRect.left + (arrowConfig.widgetRect.size.width * (cardOnTop ? 0.1 : 0.9));
+    final endArrowDy = endPositionOnBottomOfWidget ? arrowConfig.widgetRect.bottom : arrowConfig.widgetRect.top;
+    arrowAnchors.anchorEnd = Point(endArrowDx, endArrowDy);
+
+    final cardWidth = cardPosition.size?.width ?? 0;
+    if (cardWidth != 0) {
+      final controlPointDx = cardOnTop ? startArrowDx - (cardWidth / 2) : startArrowDx + (cardWidth / 2);
+      final controlPointDy = endPositionOnBottomOfWidget
+          ? arrowConfig.widgetRect.bottom + halfCardHeight
+          : arrowConfig.widgetRect.top - halfCardHeight;
+      arrowAnchors.arrowControlPoint = Point(controlPointDx, controlPointDy);
+    }
+    return arrowAnchors;
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
+}
+
+class ArrowConfig {
+  final Size screenSize;
+  final WidgetRect widgetRect;
+  final CardRect cardPosition;
+
+  ArrowConfig({
+    required this.screenSize,
+    required this.widgetRect,
+    required this.cardPosition,
+  });
 }
