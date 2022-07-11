@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tour/flutter_tour.dart';
 import 'package:flutter_tour/tour_target.dart';
+import 'package:flutter_tour/tour_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -65,59 +66,61 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey bottomBarItem2key = GlobalKey();
   final GlobalKey bottomBarItem3key = GlobalKey();
 
-  final keys = [
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-    GlobalKey(),
-  ];
+  List keys = <GlobalKey>[];
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      keys.addAll(<GlobalKey>[
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+        GlobalKey(),
+      ]);
+      setState((){});
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            key: appBarkey,
-            title: Text(widget.title),
-          ),
-          bottomNavigationBar: Material(
-            key: bottomBarkey,
-            elevation: 4.0,
-            child: Container(
-              height: 65.0,
-              color: Colors.blueGrey,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(child: _buildNavBarItem(bottomBarItem1key, 1)),
-                  Expanded(child: _buildNavBarItem(bottomBarItem2key, 2)),
-                  Expanded(child: _buildNavBarItem(bottomBarItem3key, 3)),
-                ],
-              ),
-            ),
-          ),
-          body: FlutterTour(
-            showTour: true,
-            controller: scrollController,
-            tourTargets: _getTargets(),
-            child: SingleChildScrollView(
-              controller: scrollController,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  keys.length,
-                  (index) => _buildText(index),
-                ),
-              ),
+    return FlutterTour(
+      showTour: true,
+      tourTargets: _getTargets(),
+      tourTheme: TourTheme(),
+      child: Scaffold(
+        appBar: AppBar(
+          key: appBarkey,
+          title: Text(widget.title),
+        ),
+        bottomNavigationBar: Material(
+          key: bottomBarkey,
+          elevation: 4.0,
+          child: Container(
+            height: 65.0,
+            color: Colors.blueGrey,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildNavBarItem(bottomBarItem1key, 1)),
+                Expanded(child: _buildNavBarItem(bottomBarItem2key, 2)),
+                Expanded(child: _buildNavBarItem(bottomBarItem3key, 3)),
+              ],
             ),
           ),
         ),
-      ],
+        body: keys.isEmpty ? const Center(child: CircularProgressIndicator(),) : ListView(
+          children: List.generate(
+            keys.length,
+                (index) => _buildText(index),
+          ),
+        ),
+      ),
     );
   }
 

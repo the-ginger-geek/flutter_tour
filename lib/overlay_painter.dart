@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'widget_position.dart';
+import 'widget_rect.dart';
 
-class Painter extends CustomPainter {
-  final WidgetPosition widgetPosition;
+class OverlayPainter extends CustomPainter {
+  final WidgetRect widgetRect;
 
-  Painter({required this.widgetPosition});
+  OverlayPainter({required this.widgetRect});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -16,7 +16,7 @@ class Painter extends CustomPainter {
           Path()
             ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
             ..close(),
-          Path()..addRRect(RRect.fromRectAndRadius(widgetPosition.getRect(),const Radius.circular(15.0))),
+          Path()..addRRect(RRect.fromRectAndRadius(widgetRect.getRect(),const Radius.circular(15.0))),
         ),
         paint);
   }
