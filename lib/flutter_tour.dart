@@ -119,7 +119,7 @@ class FlutterTourState extends State<FlutterTour> {
           key: keyCard,
           color: widget.tourTheme?.cardBackgroundColor,
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Column(
               children: [
                 Text(tourTargets[activePosition].title,
@@ -257,20 +257,21 @@ class FlutterTourState extends State<FlutterTour> {
     final screenSize = MediaQuery
         .of(context)
         .size;
-    final halfScreenSize = screenSize.height / 2;
+    final halfScreenHeight = screenSize.height / 2;
+    final halfScreenWidth = screenSize.width / 2;
     final cardHorizontalSpacing = screenSize.width - cardWidth;
-    final validTargetWidget = widgetRect.size.height < halfScreenSize;
+    final validTargetWidget = widgetRect.size.height < halfScreenHeight;
     if (validTargetWidget) {
-      if (widgetRect.bottom > halfScreenSize) {
+      if (widgetRect.bottom > halfScreenHeight) {
         const padding = 16.0;
-        final drawCardOnRight = widgetRect.right < (padding + cardHorizontalSpacing);
+        final drawCardOnRight = widgetRect.right < halfScreenWidth;
         final bottom = screenSize.height - widgetRect.top;
         cardRect = CardRect(
           left: drawCardOnRight ? cardHorizontalSpacing : padding,
           right: drawCardOnRight ? padding : cardHorizontalSpacing,
           bottom: bottom,
         );
-      } else if (widgetRect.top < halfScreenSize) {
+      } else if (widgetRect.top < halfScreenHeight) {
         const padding = 16.0;
         final drawCardOnRight = widgetRect.right < (padding + cardHorizontalSpacing);
         final top = widgetRect.bottom;
